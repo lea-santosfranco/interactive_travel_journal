@@ -1,4 +1,5 @@
 import React from 'react';
+import PortugalMap from './components/PortugalMap';
 
 function App() {
   return (
@@ -30,13 +31,22 @@ function App() {
         background: 'radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(90,55,10,0.28) 80%, rgba(60,35,5,0.45) 100%)'
       }}/>
 
-      <div className="relative z-10 text-center">
+      {/* Titre en haut à gauche */}
+      <div className="absolute top-8 left-10 z-10">
         <h1 className="text-5xl md:text-6xl text-[#5a4a3a] opacity-90 tracking-tighter" style={{ fontFamily: 'serif' }}>
           Bienvenue au <br />
-          <span className='italic text-4xl opacity-80'>Portugal!</span>
+          <span className="italic text-4xl opacity-80">Portugal!</span>
         </h1>
-        <div className='w-24 h-px bg-[#5a4a3a] mx-auto mt-6 opacity-30'></div>
+        <div className="w-24 h-px bg-[#5a4a3a] mt-6 opacity-30" />
       </div>
+
+      <PortugalMap
+        style={{
+          height: '85vh',
+          width: 'auto',
+          filter: 'drop-shadow(4px 8px 16px rgba(40,20,5,0.45))',
+        }}
+      />
 
     </div>
   )
