@@ -21,13 +21,12 @@ function InkDivider({ color }) {
 
 function Postmark({ city, color }) {
   const now = new Date()
-  const dateStr = now.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const dateStr = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
   return (
     <div className="flex flex-col items-center select-none" style={{ opacity: 0.55 }}>
       <svg width="90" height="90" viewBox="0 0 90 90">
         <circle cx="45" cy="45" r="42" fill="none" stroke={color} strokeWidth="2.5" strokeDasharray="4 3"/>
         <circle cx="45" cy="45" r="33" fill="none" stroke={color} strokeWidth="1"/>
-        {/* Horizontal bars */}
         <line x1="12" y1="38" x2="78" y2="38" stroke={color} strokeWidth="1.5"/>
         <line x1="12" y1="52" x2="78" y2="52" stroke={color} strokeWidth="1.5"/>
         <text x="45" y="47" textAnchor="middle" dominantBaseline="middle"
@@ -143,7 +142,7 @@ export default function Carnet({ region }) {
             onMouseEnter={e => e.target.style.opacity = 1}
             onMouseLeave={e => e.target.style.opacity = 0.85}
           >
-            ← voltar ao mapa
+            ← retour à la carte
           </button>
           <Postmark city={region.subtitle} color={accent} />
         </div>
@@ -188,9 +187,31 @@ export default function Carnet({ region }) {
 
         <InkDivider color={accent} />
 
-        {/* ── b) História ── */}
+        {/* ── Photo de la ville ── */}
+        {region.photo && (
+          <div style={{
+            marginBottom: '2.5rem',
+            marginLeft: '-3rem',
+            marginRight: '-2rem',
+            overflow: 'hidden',
+          }}>
+            <img
+              src={region.photo}
+              alt={region.nom}
+              style={{
+                width: '100%',
+                height: '320px',
+                objectFit: 'cover',
+                display: 'block',
+                filter: 'sepia(18%) contrast(92%) brightness(0.96)',
+              }}
+            />
+          </div>
+        )}
+
+        {/* ── b) Histoire ── */}
         <section style={{ marginBottom: '2.5rem' }}>
-          <SectionTitle color={accent}>História</SectionTitle>
+          <SectionTitle color={accent}>Histoire</SectionTitle>
           <p style={{ fontSize: '1.15rem', lineHeight: 1.85, opacity: 0.88 }}>
             {region.historia}
           </p>
@@ -198,16 +219,27 @@ export default function Carnet({ region }) {
 
         <InkDivider color={accent} />
 
-        {/* ── c) À mesa ── */}
+        {/* ── c) À table ── */}
         <section style={{ marginBottom: '2.5rem' }}>
-          <SectionTitle color={accent}>À mesa</SectionTitle>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+          <SectionTitle color={accent}>À table</SectionTitle>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {region.food.map((item) => (
               <li key={item.nom} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                <span style={{
-                  color: accent, fontSize: '1.3rem', lineHeight: 1, marginTop: '0.1rem', flexShrink: 0, opacity: 0.7,
-                }}>✦</span>
-                <div>
+                {item.photo && (
+                  <img
+                    src={item.photo}
+                    alt={item.nom}
+                    style={{
+                      width: '80px',
+                      height: '80px',
+                      objectFit: 'cover',
+                      flexShrink: 0,
+                      filter: 'sepia(12%) contrast(95%)',
+                      border: `1px solid rgba(${hexToRgb(accent)}, 0.2)`,
+                    }}
+                  />
+                )}
+                <div style={{ paddingTop: item.photo ? '0.2rem' : '0.1rem' }}>
                   <span style={{ fontStyle: 'italic', fontWeight: 600, fontSize: '1.1rem' }}>{item.nom}</span>
                   <span style={{ opacity: 0.7, fontSize: '1rem' }}> — {item.note}</span>
                 </div>
@@ -218,9 +250,9 @@ export default function Carnet({ region }) {
 
         <InkDivider color={accent} />
 
-        {/* ── d) Para explorar ── */}
+        {/* ── d) À explorer ── */}
         <section style={{ marginBottom: '2.5rem' }}>
-          <SectionTitle color={accent}>Para explorar</SectionTitle>
+          <SectionTitle color={accent}>À explorer</SectionTitle>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
             {region.explore.map((item) => (
               <li key={item.lieu} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
@@ -238,7 +270,7 @@ export default function Carnet({ region }) {
 
         <InkDivider color={accent} />
 
-        {/* ── e) Caderno do viajante ── */}
+        {/* ── e) Carnet du voyageur ── */}
         <section style={{
           marginBottom: '2.5rem',
           background: `rgba(${hexToRgb(accent)}, 0.04)`,
@@ -247,7 +279,7 @@ export default function Carnet({ region }) {
           padding: '1.5rem 1.75rem',
           position: 'relative',
         }}>
-          <SectionTitle color={accent}>Caderno do viajante</SectionTitle>
+          <SectionTitle color={accent}>Carnet du voyageur</SectionTitle>
           <p style={{
             fontFamily: '"Caveat", cursive',
             fontSize: '1.45rem',
@@ -257,7 +289,6 @@ export default function Carnet({ region }) {
           }}>
             {region.carnet}
           </p>
-          {/* Corner fold */}
           <div style={{
             position: 'absolute', bottom: 0, right: 0,
             width: 0, height: 0,
@@ -269,14 +300,11 @@ export default function Carnet({ region }) {
 
         {/* ── f) Pied de page ── */}
         <footer style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem',
           borderTop: `1px solid rgba(${hexToRgb(accent)}, 0.25)`,
           paddingTop: '1.25rem',
           opacity: 0.55,
         }}>
-          <span style={{ fontFamily: '"Cormorant Garamond", serif', fontStyle: 'italic', fontSize: '0.9rem' }}>
-            {region.pageRomaine}
-          </span>
           <FlowerOrnament color={accent} />
           <span style={{ fontFamily: '"IM Fell English SC", serif', fontSize: '0.8rem', letterSpacing: '0.1em' }}>
             {region.nom}
@@ -288,7 +316,6 @@ export default function Carnet({ region }) {
   )
 }
 
-// Convert hex color to "r,g,b" string for rgba()
 function hexToRgb(hex) {
   const r = parseInt(hex.slice(1,3), 16)
   const g = parseInt(hex.slice(3,5), 16)
