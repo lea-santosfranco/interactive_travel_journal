@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useTransition } from '../TransitionContext'
+import { motion, AnimatePresence } from 'framer-motion'
 
 // ── Small helpers ──────────────────────────────────────────────────────────────
 
@@ -78,15 +78,41 @@ function FlowerOrnament({ color }) {
   )
 }
 
+function FadeImage({ src, alt, style, onLoad: onLoadProp, ...props }) {
+  const [loaded, setLoaded] = React.useState(false)
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      onLoad={() => { setLoaded(true); onLoadProp?.() }}
+      style={{
+        ...style,
+        opacity: loaded ? 1 : 0,
+        transition: `opacity 0.5s ease${style?.transition ? ', ' + style.transition : ''}`,
+      }}
+      {...props}
+    />
+  )
+}
+
+// Scroll reveal preset
+const reveal = {
+  initial: { opacity: 0, y: 26 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: '-60px' },
+  transition: { duration: 0.55, ease: [0.25, 0.1, 0.35, 1] },
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function Carnet({ region }) {
   const navigate = useNavigate()
-  const { setZoom } = useTransition()
+  const [lightbox, setLightbox] = React.useState(null)
 
-  function handleRetour() {
-    navigate('/')
-  }
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
+  const padLeft = isMobile ? '1.5rem' : '3rem'
+  const padRight = isMobile ? '1.25rem' : '2rem'
 
   const bg = '#f5edd8'
   const ink = '#2e1a08'
@@ -115,18 +141,28 @@ export default function Carnet({ region }) {
         backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E")`,
       }}/>
 
-      {/* Left margin line */}
-      <div style={{
-        position: 'fixed', left: '72px', top: 0, bottom: 0, width: '1px',
-        background: 'rgba(180,100,80,0.25)', zIndex: 0, pointerEvents: 'none',
-      }}/>
+      {/* Left margin line — masquée sur mobile */}
+      {!isMobile && (
+        <div style={{
+          position: 'fixed', left: '72px', top: 0, bottom: 0, width: '1px',
+          background: 'rgba(180,100,80,0.25)', zIndex: 0, pointerEvents: 'none',
+        }}/>
+      )}
 
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: '720px', margin: '0 auto', padding: '3rem 2rem 5rem 5rem' }}>
+      <div style={{
+        position: 'relative',
+        zIndex: 1,
+        maxWidth: '720px',
+        margin: '0 auto',
+        padding: isMobile
+          ? '2rem 1.25rem 4rem 1.5rem'
+          : '3rem 2rem 5rem 5rem',
+      }}>
 
         {/* ── a) En-tête ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem' }}>
           <button
-            onClick={handleRetour}
+            onClick={() => navigate('/')}
             style={{
               fontFamily: '"IM Fell English SC", serif',
               fontSize: '0.85rem',
@@ -144,7 +180,7 @@ export default function Carnet({ region }) {
           >
             ← retour à la carte
           </button>
-          <Postmark city={region.subtitle} color={accent} />
+          <Postmark city={region.nom} color={accent} />
         </div>
 
         <div style={{ marginBottom: '0.5rem' }}>
@@ -152,7 +188,7 @@ export default function Carnet({ region }) {
             fontFamily: '"Cormorant Garamond", serif',
             fontStyle: 'italic',
             fontWeight: 600,
-            fontSize: 'clamp(4rem, 10vw, 7rem)',
+            fontSize: 'clamp(3.5rem, 10vw, 7rem)',
             lineHeight: 0.9,
             color: ink,
             margin: 0,
@@ -191,16 +227,16 @@ export default function Carnet({ region }) {
         {region.photo && (
           <div style={{
             marginBottom: '2.5rem',
-            marginLeft: '-3rem',
-            marginRight: '-2rem',
+            marginLeft: `-${padLeft}`,
+            marginRight: `-${padRight}`,
             overflow: 'hidden',
           }}>
-            <img
+            <FadeImage
               src={region.photo}
               alt={region.nom}
               style={{
                 width: '100%',
-                height: '320px',
+                height: isMobile ? '220px' : '320px',
                 objectFit: 'cover',
                 display: 'block',
                 filter: 'sepia(18%) contrast(92%) brightness(0.96)',
@@ -210,25 +246,26 @@ export default function Carnet({ region }) {
         )}
 
         {/* ── b) Histoire ── */}
-        <section style={{ marginBottom: '2.5rem' }}>
+        <motion.section {...reveal} style={{ marginBottom: '2.5rem' }}>
           <SectionTitle color={accent}>Histoire</SectionTitle>
           <p style={{ fontSize: '1.15rem', lineHeight: 1.85, opacity: 0.88 }}>
             {region.historia}
           </p>
-        </section>
+        </motion.section>
 
         <InkDivider color={accent} />
 
         {/* ── c) À table ── */}
-        <section style={{ marginBottom: '2.5rem' }}>
+        <motion.section {...reveal} style={{ marginBottom: '2.5rem' }}>
           <SectionTitle color={accent}>À table</SectionTitle>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {region.food.map((item) => (
               <li key={item.nom} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                 {item.photo && (
-                  <img
+                  <FadeImage
                     src={item.photo}
                     alt={item.nom}
+                    onClick={() => setLightbox({ src: item.photo, caption: item.nom })}
                     style={{
                       width: '80px',
                       height: '80px',
@@ -236,7 +273,11 @@ export default function Carnet({ region }) {
                       flexShrink: 0,
                       filter: 'sepia(12%) contrast(95%)',
                       border: `1px solid rgba(${hexToRgb(accent)}, 0.2)`,
+                      cursor: 'zoom-in',
+                      transition: 'filter 0.2s, transform 0.2s',
                     }}
+                    onMouseEnter={e => { e.currentTarget.style.filter = 'sepia(0%) contrast(100%)'; e.currentTarget.style.transform = 'scale(1.04)' }}
+                    onMouseLeave={e => { e.currentTarget.style.filter = 'sepia(12%) contrast(95%)'; e.currentTarget.style.transform = 'scale(1)' }}
                   />
                 )}
                 <div style={{ paddingTop: item.photo ? '0.2rem' : '0.1rem' }}>
@@ -246,12 +287,12 @@ export default function Carnet({ region }) {
               </li>
             ))}
           </ul>
-        </section>
+        </motion.section>
 
         <InkDivider color={accent} />
 
         {/* ── d) À explorer ── */}
-        <section style={{ marginBottom: '2.5rem' }}>
+        <motion.section {...reveal} style={{ marginBottom: '2.5rem' }}>
           <SectionTitle color={accent}>À explorer</SectionTitle>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
             {region.explore.map((item) => (
@@ -266,19 +307,22 @@ export default function Carnet({ region }) {
               </li>
             ))}
           </ul>
-        </section>
+        </motion.section>
 
         <InkDivider color={accent} />
 
         {/* ── e) Carnet du voyageur ── */}
-        <section style={{
-          marginBottom: '2.5rem',
-          background: `rgba(${hexToRgb(accent)}, 0.04)`,
-          border: `1px solid rgba(${hexToRgb(accent)}, 0.18)`,
-          borderRadius: '2px',
-          padding: '1.5rem 1.75rem',
-          position: 'relative',
-        }}>
+        <motion.section
+          {...reveal}
+          style={{
+            marginBottom: '2.5rem',
+            background: `rgba(${hexToRgb(accent)}, 0.04)`,
+            border: `1px solid rgba(${hexToRgb(accent)}, 0.18)`,
+            borderRadius: '2px',
+            padding: '1.5rem 1.75rem',
+            position: 'relative',
+          }}
+        >
           <SectionTitle color={accent}>Carnet du voyageur</SectionTitle>
           <p style={{
             fontFamily: '"Caveat", cursive',
@@ -296,7 +340,7 @@ export default function Carnet({ region }) {
             borderWidth: '0 0 24px 24px',
             borderColor: `transparent transparent rgba(${hexToRgb(accent)}, 0.2) transparent`,
           }}/>
-        </section>
+        </motion.section>
 
         {/* ── f) Pied de page ── */}
         <footer style={{
@@ -312,6 +356,66 @@ export default function Carnet({ region }) {
         </footer>
 
       </div>
+
+      {/* ── Lightbox ── */}
+      <AnimatePresence>
+        {lightbox && (
+          <motion.div
+            key="lightbox"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setLightbox(null)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 200,
+              background: 'rgba(18, 8, 2, 0.9)',
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              cursor: 'zoom-out',
+              gap: '1rem',
+            }}
+          >
+            <motion.img
+              src={lightbox.src}
+              alt={lightbox.caption}
+              initial={{ scale: 0.88, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.88, opacity: 0 }}
+              transition={{ duration: 0.25, ease: [0.25, 0.1, 0.35, 1] }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                maxWidth: '88vw',
+                maxHeight: '80vh',
+                objectFit: 'contain',
+                filter: 'sepia(10%) contrast(96%)',
+                boxShadow: '0 8px 60px rgba(0,0,0,0.55)',
+              }}
+            />
+            <p style={{
+              fontFamily: '"IM Fell English SC", serif',
+              fontSize: '0.8rem',
+              letterSpacing: '0.18em',
+              color: 'rgba(240,228,200,0.65)',
+              margin: 0,
+              pointerEvents: 'none',
+            }}>
+              {lightbox.caption}
+            </p>
+            <button
+              onClick={() => setLightbox(null)}
+              style={{
+                position: 'fixed', top: '1.25rem', right: '1.5rem',
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'rgba(240,228,200,0.6)', fontSize: '1.4rem',
+                lineHeight: 1, padding: '0.25rem',
+              }}
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

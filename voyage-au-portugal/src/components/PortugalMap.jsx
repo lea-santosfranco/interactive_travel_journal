@@ -1,5 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useTransition } from '../TransitionContext'
 import { REGIONS } from '../data'
 
@@ -31,92 +32,163 @@ export default function PortugalMap({ style, className }) {
   const navigate = useNavigate()
   const { setZoom } = useTransition()
   const svgRef = React.useRef(null)
+  const [tooltip, setTooltip] = React.useState(null)
+  const [hoveredId, setHoveredId] = React.useState(null)
+
+  function getScreenPos(city) {
+    const rect = svgRef.current.getBoundingClientRect()
+    const vb = svgRef.current.viewBox.baseVal
+    const scaleX = rect.width / vb.width
+    const scaleY = rect.height / vb.height
+    return {
+      x: rect.left + geoX(city.lon) * scaleX,
+      y: rect.top + geoY(city.lat) * scaleY,
+    }
+  }
 
   function handleMarkerClick(e, city) {
     const region = REGIONS[city.id]
     if (!region) return
-
-    // Get screen position of the click for the zoom origin
-    const rect = svgRef.current.getBoundingClientRect()
-    const svgEl = svgRef.current
-    const vb = svgEl.viewBox.baseVal
-    const scaleX = rect.width / vb.width
-    const scaleY = rect.height / vb.height
-    const svgX = geoX(city.lon)
-    const svgY = geoY(city.lat)
-    const screenX = rect.left + svgX * scaleX
-    const screenY = rect.top + svgY * scaleY
-
-    setZoom({ x: screenX, y: screenY, color: region.accent })
-
+    const { x, y } = getScreenPos(city)
+    setZoom({ x, y, color: region.accent })
     setTimeout(() => {
       navigate(`/regiao/${region.id}`)
-      // Clear zoom after page has loaded
       setTimeout(() => setZoom(null), 200)
     }, 650)
   }
 
+  function handleMarkerEnter(city) {
+    const region = REGIONS[city.id]
+    if (!region) return
+    const { x, y } = getScreenPos(city)
+    setTooltip({ x, y, city, region })
+    setHoveredId(city.id)
+  }
+
+  function handleMarkerLeave() {
+    setTooltip(null)
+    setHoveredId(null)
+  }
+
   return (
-    <svg
-      ref={svgRef}
-      viewBox="0 0 1024 1024"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      style={style}
-    >
-      <defs>
-        <filter id="label-halo" x="-20%" y="-20%" width="140%" height="140%">
-          <feMorphology operator="dilate" radius="2" in="SourceAlpha" result="expanded"/>
-          <feFlood floodColor="#e8dcc0" floodOpacity="0.85" result="color"/>
-          <feComposite in="color" in2="expanded" operator="in" result="halo"/>
-          <feMerge><feMergeNode in="halo"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-      </defs>
-
-      {/* Carte du Portugal */}
-      <g
-        transform="translate(0,1024) scale(0.1,-0.1)"
-        fill="#e8dcc0"
-        stroke="#2a1a0a"
-        strokeWidth="30"
+    <>
+      <svg
+        ref={svgRef}
+        viewBox="0 0 1024 1024"
+        xmlns="http://www.w3.org/2000/svg"
+        className={className}
+        style={style}
       >
-        <path d={PATH} />
-      </g>
+        <defs>
+          <filter id="label-halo" x="-20%" y="-20%" width="140%" height="140%">
+            <feMorphology operator="dilate" radius="2" in="SourceAlpha" result="expanded"/>
+            <feFlood floodColor="#e8dcc0" floodOpacity="0.85" result="color"/>
+            <feComposite in="color" in2="expanded" operator="in" result="halo"/>
+            <feMerge><feMergeNode in="halo"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
 
-      {/* Marqueurs de villes */}
-      <g>
-        {CITIES.map((city) => {
-          const { name, lat, lon, dx, dy } = city
-          const x = geoX(lon)
-          const y = geoY(lat)
-          return (
-            <g
-              key={name}
-              onClick={(e) => handleMarkerClick(e, city)}
-              style={{ cursor: 'pointer' }}
-            >
-              {/* Zone de clic invisible plus large */}
-              <circle cx={x} cy={y} r={22} fill="transparent" />
-              {/* Anneau extérieur */}
-              <circle cx={x} cy={y} r={9} fill="#7a1818" stroke="#e8dcc0" strokeWidth={1.5} opacity={0.92} />
-              {/* Point central */}
-              <circle cx={x} cy={y} r={3.5} fill="#f0e2c0" />
-              {/* Étiquette */}
-              <text
-                x={x + dx}
-                y={y + dy}
-                fontSize={19}
-                fontFamily="Georgia, serif"
-                fontStyle="italic"
-                fill="#2e1a08"
-                filter="url(#label-halo)"
+        {/* Carte du Portugal */}
+        <g
+          transform="translate(0,1024) scale(0.1,-0.1)"
+          fill="#e8dcc0"
+          stroke="#2a1a0a"
+          strokeWidth="30"
+        >
+          <path d={PATH} />
+        </g>
+
+        {/* Marqueurs de villes */}
+        <g>
+          {CITIES.map((city, index) => {
+            const { name, lat, lon, dx, dy } = city
+            const x = geoX(lon)
+            const y = geoY(lat)
+            const isHovered = hoveredId === city.id
+            return (
+              <motion.g
+                key={city.id}
+                transform={`translate(${x}, ${y})`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: index * 0.07 + 0.2, duration: 0.4 }}
+                onClick={(e) => handleMarkerClick(e, city)}
+                onMouseEnter={() => handleMarkerEnter(city)}
+                onMouseLeave={handleMarkerLeave}
+                style={{ cursor: 'pointer' }}
               >
-                {name}
-              </text>
-            </g>
-          )
-        })}
-      </g>
-    </svg>
-  );
+                {!isHovered && (
+                  <motion.circle
+                    cx={0} cy={0} r={9}
+                    fill="none" stroke="#7a1818" strokeWidth="1.2"
+                    style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
+                    animate={{ scale: [1, 2.6], opacity: [0.4, 0] }}
+                    transition={{ duration: 2.5, repeat: Infinity, ease: 'easeOut', delay: index * 0.22 }}
+                  />
+                )}
+                <circle cx={0} cy={0} r={22} fill="transparent" />
+                {isHovered && (
+                  <circle cx={0} cy={0} r={15} fill="none" stroke="#7a1818" strokeWidth="1.5" opacity={0.5} />
+                )}
+                <circle cx={0} cy={0} r={9} fill="#7a1818" stroke="#e8dcc0" strokeWidth={1.5} opacity={isHovered ? 1 : 0.92} />
+                <circle cx={0} cy={0} r={3.5} fill="#f0e2c0" />
+                <text
+                  x={dx}
+                  y={dy}
+                  fontSize={19}
+                  fontFamily="Georgia, serif"
+                  fontStyle="italic"
+                  fill="#2e1a08"
+                  filter="url(#label-halo)"
+                  fontWeight={isHovered ? '600' : 'normal'}
+                >
+                  {name}
+                </text>
+              </motion.g>
+            )
+          })}
+        </g>
+      </svg>
+
+      {tooltip && (
+        <div
+          style={{
+            position: 'fixed',
+            left: tooltip.x,
+            top: tooltip.y - 82,
+            transform: 'translateX(-50%)',
+            background: 'rgba(242, 232, 200, 0.97)',
+            border: `1px solid ${tooltip.region.accent}`,
+            borderRadius: '2px',
+            padding: '8px 14px',
+            maxWidth: '240px',
+            width: 'max-content',
+            pointerEvents: 'none',
+            zIndex: 20,
+            boxShadow: '0 2px 14px rgba(40,20,5,0.18)',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{
+            fontFamily: '"IM Fell English SC", serif',
+            fontSize: '0.72rem',
+            letterSpacing: '0.15em',
+            color: tooltip.region.accent,
+            marginBottom: '4px',
+          }}>
+            {tooltip.city.name}
+          </div>
+          <div style={{
+            fontFamily: '"Cormorant Garamond", Georgia, serif',
+            fontStyle: 'italic',
+            fontSize: '0.88rem',
+            color: '#2e1a08',
+            lineHeight: 1.45,
+          }}>
+            {tooltip.region.tagline}
+          </div>
+        </div>
+      )}
+    </>
+  )
 }
